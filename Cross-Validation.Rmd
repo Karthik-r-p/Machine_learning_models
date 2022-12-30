@@ -1,0 +1,118 @@
+---
+title: "Lab 11 - Cross-Validation"
+author: Karthik R Patil
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    theme: simplex
+    number_sections: false
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+```
+
+## 0 load the package 
+```{r}
+library(boot)
+```
+
+## 1 create a data frame
+```{r}
+# load the data
+housing.df <- read.csv('BostonHousing.csv')
+# first six rows 
+head(housing.df)
+# column names 
+names(housing.df)
+```
+
+## 2 leave-one-out cross-validation 
+
+### 2.1 model 1: model MEDV as a cubic function of DIS 
+```{r}
+# fit a regression on the training set
+glm1 <-glm(MEDV~poly(DIS,3),data=housing.df)
+summary(glm1)
+# compute the leave-one-out cross-validation predictor error
+loocv.err1 <- cv.glm(housing.df,glm1)
+# cross-validated MSE 
+loocv.err1$delta[1]
+```
+
+### 2.2 model 2: add a 4th degree polynomial in NOX as predictors, in addition to predictors in model 1
+```{r}
+# fit a regression on the training set 
+glm2 <-glm(MEDV~poly(DIS,3)+poly(NOX,4),data=housing.df)
+summary(glm2)
+# compute the leave-one-out cross-validation predictor error
+loocv.err2 <- cv.glm(housing.df,glm2)
+# cross-validated MSE 
+loocv.err2$delta[1]
+
+
+```
+
+### 2.3 Model 3: add a 5th degree polynomial in CRIM as predictors, in addition to predictors in Model 2
+```{r}
+# fit a regression on the training set
+glm3 <-glm(MEDV~poly(DIS,3)+poly(NOX,4)+poly(CRIM,5),data=housing.df)
+summary(glm3)
+# compute the leave-one-out cross-validation predictor error
+loocv.err3 <- cv.glm(housing.df,glm3)
+# cross-validated MSE 
+loocv.err3$delta[1]
+
+```
+
+### 2.4 identify the best a model according to the leave-one-out cross-validation method 
+```{r}
+# which model is best for predicting median home values?  
+#model3
+```
+
+## 3 k-fold cross validation
+
+### 3.1 model 1: model MEDV as a cubic function of DIS 
+```{r}
+# compute the 5-fold cross-validation predictor error
+set.seed(1)
+kfcv.err1 <- cv.glm(housing.df,glm1,K=5)
+
+# cross-validated MSE  
+kfcv.err1$delta[1]
+
+
+```
+
+### 3.2 model 2: add a 4th degree polynomial in NOX as predictors, in addition to predictors in model 1 
+```{r}
+# compute the 5-fold cross-validation predictor error
+set.seed(1)
+kfcv.err2 <- cv.glm(housing.df,glm2,K=5)
+
+# cross-validated MSE  
+kfcv.err2$delta[1]
+
+
+```
+
+### 3.3 Model 3: add a 5th degree polynomial in CRIM as predictors, in addition to predictors in Model 2
+```{r}
+# compute the 5-fold cross-validation predictor error
+set.seed(1)
+kfcv.err3 <- cv.glm(housing.df,glm3,K=5)
+
+# cross-validated MSE  
+kfcv.err3$delta[1]
+
+
+```
+
+### 3.4 identify the best a model according to the 5-fold cross-validation method 
+```{r}
+# which model is best for predicting median home values?  
+#model3
+```

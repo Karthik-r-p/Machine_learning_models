@@ -1,0 +1,170 @@
+---
+title: "Lab 12 - Lasso Regression"
+author: Karthik R Patil
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    theme: simplex
+    number_sections: false
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+```
+
+## 0 load the package 
+```{r}
+library(glmnet)
+```
+
+## 1 create a data frame
+```{r}
+# load the data 
+df= read.csv('Hitters.csv')
+# first six rows
+head(df)
+# column names
+names(df)
+# dimension 
+dim(df)
+# number of rows with missing values 
+sum(is.na(df))
+```
+
+## 2 remove rows that have missing values in any variable  
+```{r}
+# remove rows with any missing values 
+df<- na.omit(df)
+# dimension 
+dim(df)
+# number of missing values 
+sum(is.na(df))
+```
+
+## 3 convert a data frame of predictors to a matrix 
+```{r}
+# convert a data frame of predictors to a matrix and create dummy variables for character variables 
+x <- model.matrix(Salary~.,df)[,-1]
+# first six rows of x
+head(x)
+# outcome 
+y <- df$Salary
+```
+
+## 4 data partition 
+```{r}
+
+# set seed 
+set.seed(1)
+# row numbers of the training set 
+train.index <- sample(c(1:dim(x)[1]), dim(x)[1]*0.5)
+# predictors in the training set 
+head(x[train.index,])
+
+# outcome in the training set 
+head(y[train.index])
+# row numbers of the test set 
+test.index <- (-train.index)
+head(test.index)
+# predictors in the test set 
+head(x[test.index,])
+# outcome in the test set 
+y.test <- y[test.index]
+head(y.test)
+```
+
+## 5 lasso regression 
+```{r}
+# fit a lasso regression model 
+library(glmnet)
+fit<- glmnet(x[train.index,],y[train.index],alpha=1)
+# sequence of lambda values 
+fit$lambda
+# dimension of lasso regression coefficients 
+dim(coef(fit))
+# plot coefficients on log of lambda values 
+plot(fit, xvar="lambda")
+```
+
+## 6 model with a small lambda value 
+```{r}
+# return a small lambda value 
+lambda.small <- fit$lambda[100]
+lambda.small
+# lasso regression coefficients
+coef.lambda.small <- predict(fit,s=lambda.small,type="coefficients")[1:20,]
+# non-zero coefficient estimates (greatest number of predictors)  
+coef.lambda.small[coef.lambda.small!=0]
+# make predictions for records in the test set 
+pred.lambda.small <- predict(fit,s=lambda.small,newx=x[test.index,])
+head(pred.lambda.small)
+# MSE in the test set 
+mean((y.test-pred.lambda.small)^2)
+```
+
+## 7 model with a medium-sized lambda value
+```{r}
+# return a medium lambda value 
+lambda.medium <- fit$lambda[50]
+lambda.medium
+# lasso regression coefficients
+coef.lambda.medium <- predict(fit,s=lambda.medium,type="coefficients")[1:20,]
+coef.lambda.medium
+# non-zero coefficient estimates
+coef.lambda.medium[coef.lambda.medium!=0]
+# make predictions for records the test set 
+pred.lambda.medium <- predict(fit,s=lambda.medium,newx=x[test.index,])
+head(pred.lambda.medium)
+# MSE in the test set 
+mean((y.test-pred.lambda.medium)^2)
+```
+## 8 model with a large lambda value
+```{r}
+# return a large lambda value 
+lambda.large <- fit$lambda[1]
+lambda.large
+# lasso regression coefficients  
+coef.lambda.large <- predict(fit,s=lambda.large,type="coefficients")[1:20,]
+coef.lambda.large
+# non-zero coefficient estimates (the least number of predictors)  
+coef.lambda.large[coef.lambda.large!=0]
+# make predictions for records in the test set 
+pred.lambda.large <- predict(fit,s=lambda.large,newx=x[test.index,])
+head(pred.lambda.large)
+# MSE in the test set 
+mean((y.test-pred.lambda.large)^2)
+```
+
+## 9 use cross-validation to choose lambda 
+```{r}
+# set seed 
+set.seed(1)
+# 5-fold cross validation 
+cv.fit <- cv.glmnet(x[train.index,],y[train.index],alpha=1, nfold=5, type.measure="mse")
+# plot the cross-validated MSE for each lambda 
+plot(cv.fit)
+# lambda that corresponds to the lowest cross-validated MSE 
+lambda.best <- cv.fit$lambda.min
+lambda.best
+log(lambda.best)
+```
+
+## 10 model with the best lambda 
+```{r}
+# lasso regression coefficients  
+coef.lambda.best <- predict(cv.fit,s=lambda.best,type="coefficients")[1:20,]
+coef.lambda.best
+# non-zero coefficients 
+coef.lambda.best[coef.lambda.best!=0]
+# make predictions for records in the test set
+pred.lambda.best <- predict(cv.fit,s=lambda.best,newx=x[test.index,])
+head(pred.lambda.best)
+# MSE in the test set (lowest MSE)
+mean((y.test-pred.lambda.best)^2)
+mean((y.test-pred.lambda.small)^2)
+mean((y.test-pred.lambda.medium)^2)
+mean((y.test-pred.lambda.large)^2)
+
+```

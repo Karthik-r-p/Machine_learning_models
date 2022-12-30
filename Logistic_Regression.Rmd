@@ -1,0 +1,137 @@
+---
+title: "Lab 08 - Logistic Regression"
+author: Karthik R Patil
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    theme: simplex
+    number_sections: false
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+```
+
+## 0 load the package and suppress scientific notation 
+```{r}
+# load packages 
+library(ggplot2)
+
+# first six rows
+ebay.df= 
+# not display scientific notation
+options(scipen=999)
+```
+
+## 1 create a data frame
+```{r}
+# load the data
+ebay.df <- read.csv("eBayAuctions.csv", stringsAsFactors = FALSE)
+head(ebay.df)
+# variable names 
+names(ebay.df)
+```
+
+## 2 apply a function to each group 
+```{r}
+# mean of the binary outcome for each day of the week of auction close   
+tapply(ebay.df$Competitive, ebay.df$endDay, mean)
+
+# mean of the binary outcome for each auction category  
+tapply(ebay.df$Competitive, ebay.df$Category, mean)
+```
+
+## 3 reduce levels in the day of week that the auction closed  
+```{r}
+# combine Sunday and Friday into a single category called Sun_Fri
+ebay.df$endDay== 'Sun'
+ebay.df$endDay[ebay.df$endDay=='Sun']<- 'Sun_Fri'
+ebay.df$endDay[ebay.df$endDay=='Fri']<- 'Sun_Fri'
+```
+
+## 4 reduce levels in auction categories 
+```{r}
+# combine Business/Industrial and Computers into a single category called Computers
+ebay.df$Category[ebay.df$Category=='Business/Industrial']<- 'Computer'
+
+# combine Antique/Art/Craft and Collectibles into a single category called collectibles
+ebay.df$Category[ebay.df$Category=='Antique/Art/Craft']<- 'Collectibles'
+```
+
+## 5 convert Duration to a categorical or factor variable 
+```{r}
+# convert Duration from a numeric variable to a categorical or factor variable  
+ebay.df$Duration  <- as.factor(ebay.df$Duration)
+# variable types 
+str(ebay.df$Duration)
+```
+
+## 6 data partition
+```{r}
+# set seed for reproducing the partition 
+set.seed(1)
+# takes a sample of row numbers for the training set 
+train.index <- sample(c(1:dim(ebay.df)[1]), dim(ebay.df)[1]*0.6)  
+head(train.index)
+# training set 
+train.df <- ebay.df[train.index, ]
+head(train.df)
+
+
+# test set 
+test.df <- ebay.df[-train.index, ]
+head(test.df)
+
+```
+
+## 7 fit a logistic regression model 
+```{r,warning=FALSE}
+# logistic regression using all the variables
+reg <- glm(Competitive.~., data = train.df, family = "binomial") 
+
+# summary table 
+summary(reg)
+```
+
+## 8 generate predicted probabilities for records in the test set 
+```{r}
+# predicted probabilities 
+pred <- predict(reg, test.df, type = "response")
+
+# first six values 
+head(pred)
+```
+
+## 9 confusion matrix 
+```{r}
+library(caret)
+
+confusionMatrix(as.factor(ifelse(pred > 0.5, 1, 0)), 
+                as.factor(test.df$Competitive.),positive = "1")
+
+
+
+```
+
+## 10 creating a gain table 
+```{r}
+# gain table 
+library(gains)
+
+gain <- gains(test.df$Competitive., pred, groups=10)
+# cumulative percentage of competitive auctions 
+gain$cume.pct.of.total
+# cumulative number of auctions 
+gain$cume.obs 
+```
+
+## 11 plot a lift chart
+```{r}
+# plot the cumulative number of competitive auctions against the cumulative number of auctions
+plot(c(0,gain$cume.pct.of.total*sum(test.df$Competitive.))~c(0,gain$cume.obs), 
+     xlab="cumulative number of actions", ylab="cumulative number of competitive actions", type="l")
+# add a baseline curve 
+lines(c(0,sum(test.df$Competitive.))~c(0, dim(test.df)[1]))
+```

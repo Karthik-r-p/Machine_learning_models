@@ -1,0 +1,120 @@
+---
+title: "Lab 13 - Classification Trees (Solution)"
+author: Karthik R Patil
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    theme: simplex
+    number_sections: false
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+```
+
+## 0 load the packages 
+```{r}
+library(rpart)
+library(rpart.plot)
+library(caret)
+
+```
+
+## 1 create a data frame
+```{r}
+# load the data and set stringsAsFactors to TRUE
+ebay.df<-read.csv("eBayAuctions.csv",stringsAsFactors  =  TRUE)
+# first six rows 
+head(ebay.df)
+# column names
+names(ebay.df)
+```
+
+## 2 convert numeric variables to categorical variables
+```{r}
+# convert Duration to a categorical variable
+ebay.df$Duration <- as.factor(ebay.df$Duration)
+# convert Competitive. to a categorical variable
+ebay.df$Competitive. <- as.factor(ebay.df$Competitive.)
+# return the structure 
+str(ebay.df)
+```
+
+## 3 partition the data into train (60%) and validation (40%) sets
+```{r}
+# set the seed 
+ # set the seed 
+set.seed(1)
+# row numbers of the training set 
+train.index <- sample(c(1:dim(ebay.df)[1]), dim(ebay.df)[1]*0.6)  
+head(train.index)
+# training set
+# training set
+train.df <- ebay.df[train.index, ]
+head(train.df)
+# test set 
+test.df <- ebay.df[-train.index, ]
+head(test.df)
+```
+
+## 4 fit a classification tree on the training set 
+```{r}
+# set seed 
+set.seed(1)
+# classification tree
+ct <- rpart(Competitive. ~ ., data = train.df, method = "class",cp=0.00001,minbucket=30)
+```
+
+## 5 generate predicted classes for records in the test set 
+```{r}
+# predicted classes
+pred.class<-predict(ct,test.df,type = "class")
+# first six values 
+head(pred.class)
+```
+
+## 6 create a confusion matrix
+```{r}
+confusionMatrix(pred.class, test.df$Competitive., positive = "1")
+
+```
+
+## 7 prune the tree
+```{r}
+# display the cp table
+ct$cptable
+# xerror values 
+ct$cptable[,"xerror"]
+# index of the row with the minimum xerror
+which.min(ct$cptable[,"xerror"])
+# CP value of the row with the minimum xerror 
+ct$cptable[which.min(ct$cptable[,"xerror"]),"CP"]
+```
+
+## 8 identify the best-pruned tree
+```{r}
+pruned.ct <- prune(ct, cp = ct$cptable[which.min(ct$cptable[,"xerror"]),"CP"])
+
+```
+
+## 9 plot the pruned tree
+```{r}
+prp(pruned.ct, type = 1, extra = 1)
+
+```
+
+## 10 generate predicted classes for records in the test set 
+```{r}
+# predicted classes 
+pruned.pred.class <- predict(pruned.ct,test.df,type = "class")
+# first six values 
+head(pruned.pred.class)
+```
+
+## 11 create a confusion matrix
+```{r}
+
+confusionMatrix(pruned.pred.class, test.df$Competitive., positive = "1")
+```

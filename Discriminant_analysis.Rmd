@@ -1,0 +1,106 @@
+---
+title: "Lab 09 - Discriminant Analysis"
+author: Karthik R Patil
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    theme: simplex
+    number_sections: false
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+```
+
+## 0 load the packages 
+```{r}
+# remove # and install the package if you have not installed DiscriMiner during lecture 9
+#install.packages("https://cran.r-project.org/src/contrib/Archive/DiscriMiner/DiscriMiner_0.1-29.tar.gz", repos=NULL)
+library(DiscriMiner)
+
+library(caret)
+library(gains)
+
+```
+
+## 1 create a data frame
+```{r}
+
+# load the data
+df= read.csv('SystemAdministrators.csv')
+# first six rows
+head(df)
+# column names 
+names(df)
+```
+
+## 2 data partition 
+```{r}
+# set seed for reproducing the partition 
+set.seed(1)
+# row numbers of the training set 
+train.index <- sample(c(1:dim(df)[1]), dim(df)[1]*0.6)  
+head(train.index)
+# row numbers of the test set 
+test.index <- setdiff(row.names(df), train.index)
+head(test.index)
+```
+
+## 3 perform a discriminant analysis using the training set
+```{r}
+# run a discriminant analysis using the training set
+da.reg <- linDA(df[train.index,1:2] , df[train.index,3])
+
+# classification function 
+da.reg$functions
+# poor administrator score (class=No)
+da.reg$scores[,"No"]
+# good administrator score (class=Yes)
+da.reg$scores[,"Yes"]
+# predicted classes 
+da.reg$classification
+```
+
+## 4 making predictions for records in the test set  
+```{r}
+# classify observations in the test set 
+pred <- classify(da.reg,df[test.index,1:2])
+# classification scores 
+pred$scores
+# predicted probabilities of being a good administrator 
+prob.good <- exp(pred$scores[,"Yes"])/(exp(pred$scores[,"No"])+exp(pred$scores[,"Yes"]))
+# predicted classes 
+pred$pred_class
+```
+
+## 5 confusion matrix 
+```{r}
+
+confusionMatrix(pred$pred_class, as.factor(df[test.index,3]), positive = "Yes")
+```
+
+## 6 creating a gain table 
+```{r}
+# gain table 
+gain <- gains(ifelse(df[test.index,3]=="Yes",1,0) , prob.good, groups = 5)
+
+# cumulative percentage of good administrators  
+gain$cume.pct.of.total   
+
+# cumulative number of administrators
+gain$cume.obs
+```
+
+## 7 plot a lift chart
+```{r}
+# plot the cumulative number of good administrators against the cumulative number of administrators
+
+plot(c(0,gain$cume.pct.of.total*sum(df[test.index,3]=="Yes"))~c(0,gain$cume.obs),
+     xlab="cumulative number of administrators", ylab="cumulative
+number of good administrators", type="l")
+# add a baseline curve 
+lines(c(0,sum(df[test.index,3]=="Yes")) ~ c(0,dim(df[test.index,])[1] )) 
+
+```

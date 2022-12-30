@@ -1,0 +1,163 @@
+---
+title: "Lab 10 - Variable Selection"
+author: Karthik R Patil
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    theme: simplex
+    number_sections: false
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+```
+
+## 0 load the package 
+```{r}
+library(leaps)
+
+
+```
+
+## 1 create a data frame
+```{r}
+# load the data 
+housing.df= read.csv('BostonHousing.csv')
+# remove the variable CAT..MEDV
+housing.df= subset(housing.df, select=-c(CAT..MEDV))
+# first six rows
+head(housing.df)
+# column names 
+names(housing.df)
+```
+
+## 2 fit a multiple linear regression model
+```{r}
+# linear regression 
+lm <- lm(MEDV ~ CRIM+CHAS+RM, data = housing.df)
+
+# summary table 
+summary(lm)
+```
+
+## 3 predict for a new sample  
+```{r}
+# create a data frame 
+new<- data.frame("CHAS" = 0, "CRIM" = 0.1,"RM" = 6)
+new
+# make a prediction 
+new<- predict(lm,new)
+new
+```
+
+## 4 data partition 
+```{r}
+# set seed for reproducing the partition 
+set.seed(1)
+# row numbers of the training set 
+train.index <- sample(c(1:dim(housing.df)[1]), dim(housing.df)[1]*0.6)  
+head(train.index)
+# training set 
+train.df <- housing.df[train.index, ]
+head(train.df)
+# test set 
+test.df <- housing.df[-train.index, ]
+head(test.df)
+
+```
+
+## 5 exhaustive research 
+```{r}
+# exhaustive search
+search <- regsubsets(MEDV ~ ., data = train.df, nbest = 1, nvmax = 12, method = "exhaustive")
+
+# summary table 
+sum <- summary(search)
+
+# show models
+sum$which
+
+# show metrics
+sum$adjr2
+
+```
+
+## 6 model with the highest adjusted R-squared 
+```{r}
+# sort the adjusted r-squared 
+order(sum$adjr2, decreasing = TRUE)
+# a logical vector indicating which elements are in the 10th model
+selected.vars<- names(train.df)[sum$which[10,-1]]
+
+# names of the predictors in the 10th model 
+selected.vars
+# fit a linear regression model using the training set 
+lm.search <- lm(MEDV ~ .,data = train.df[,selected.vars])
+
+
+# make predictions on the test set 
+lm.search.pred<- predict(lm.search, test.df)
+head(lm.search.pred)
+
+# MSE in the test set 
+mean((test.df$MEDV-lm.search.pred)^2)
+
+```
+
+## 7 backward elimination 
+```{r}
+# fit the model with all 12 predictors  
+lm.full <- lm(MEDV ~ ., data = train.df)
+lm.full
+# use step() to run backward elimination 
+lm.step.backward <- step(lm.full, direction = "backward")
+ 
+# summary table 
+summary(lm.step.backward) 
+
+# making predictions on the test set
+lm.step.pred.backward <- predict(lm.step.backward, test.df)
+head(lm.step.pred.backward)
+
+# MSE in the test set 
+mean((test.df$MEDV-lm.step.pred.backward)^2)
+
+```
+
+## 8 forward selection
+```{r}
+# create model with no predictors
+lm.null <- lm(MEDV~1, data = train.df)
+lm.null
+
+# use step() to run forward selection  
+ lm.step.forward <- step(lm.null, scope=list(lower=lm.null, upper=lm.full), direction = "forward")
+
+# summary table 
+summary(lm.step.forward) 
+# making predictions on the test set
+lm.step.pred.forward <- predict(lm.step.forward, test.df)
+head(lm.step.pred.forward)
+
+# MSE in the test set 
+mean((test.df$MEDV-lm.step.pred.forward)^2)
+
+```
+
+## 9 stepwise regression 
+```{r}
+# use step() to run stepwise regression  
+lm.step.both <- step(lm.full, direction = "both")
+
+# summary table 
+summary(lm.step.both) 
+# make predictions on the test set
+lm.step.pred.both <- predict(lm.step.both, test.df)
+head(lm.step.pred.both)
+
+# MSE in the test set 
+mean((test.df$Price-lm.step.pred.both)^2)
+
+```
