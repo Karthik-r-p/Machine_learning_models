@@ -10,3 +10,5 @@ Executed variable selection techniques to understand important variables to buil
 Performed cross validation and hyper parameter tuning to increase the accuracy of models.
 
 Understood the overfitting and underfitting concepts.
+
+Gained proficiency in AWS.
