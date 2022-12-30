@@ -1,0 +1,141 @@
+---
+title: "Lab 04 - Data Exploration"
+author: Karthik R Patil
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    theme: simplex
+    number_sections: false
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+```
+
+## 0 load the package 
+```{r}
+library(tidyverse)
+```
+
+## 1 create a tibble 
+
+```{r}
+# load the data 
+df<- read_csv("firm.csv")
+
+# first six rows 
+head(df)
+
+# column names
+names(df)
+```
+
+## 2 calculate summary statistics 
+
+```{r}
+# 2.1 average net income   
+mean(df$NI)
+# 2.2 first decile of net income  
+quantile(df$NI, 0.10)
+# 2.3 summary of net income    
+summary(df$NI)
+
+```
+
+## 3 compute counts and proportion of logical values    
+```{r}
+# 3.1 number of rows 
+sum(df$NI>10000 & df$DV >0)
+
+# 3.2 proportion of rows 
+mean(df$NI>10000 & df$DV >0)
+```
+
+## 4 summarize data with dpylr  
+
+### 4.1 average and maximum net income 
+```{r}
+summarize(df, NI_mean= mean(NI), NI_max= max(NI),n_rows=n(), n_firms=n_distinct(TIC))
+
+```
+
+### 4.2 average and minimum net income by firm 
+```{r}
+
+df_by_TIC<- group_by(df, TIC)
+summarize(df_by_TIC, NI_mean= mean(NI),NI_min= min(NI), n_rows= n())
+```
+
+## 5 combine multiple operations with the pipe 
+
+### 5.1 average net income by firm  
+```{r}
+df %>%
+  group_by(TIC) %>%
+  summarize( NI_mean= mean(NI)) %>%
+  arrange(desc(NI_mean)) 
+  
+  
+```
+
+### 5.2 most recent return on assets by firm 
+```{r}
+
+df$ROA=df$NI/df$AT
+df %>% 
+  group_by(TIC) %>% 
+  arrange(desc(FYEAR)) %>% 
+  summarize(recent_ROA=first(ROA))
+```
+
+## 6 combine firm fundamentals with executives’ compensation	
+
+### 6.1 load executive compensation data 
+```{r}
+# load the data 
+manager <- read_csv("manager.csv")
+
+# first six rows 
+head(manager)
+# column names
+names(manager)
+```
+
+### 6.2  frequency counts of firm
+```{r}
+table(df$TIC)
+
+```
+
+### 6.3 frequency counts of year
+```{r}
+table(manager$TICKER)
+
+```
+
+### 6.4 inner join 
+```{r}
+# inner join 
+merged<- inner_join(manager, df, by=c("TICKER"= "TIC", "YEAR"= "FYEAR"))
+
+# first six rows 
+head(merged)
+# column names 
+
+```
+
+### 6.5 average salary and return on assets during 2017 and 2018 
+```{r}
+
+merged %>%
+  filter(YEAR==2017 | YEAR==2018) %>%
+  group_by (TICKER) %>%
+  summarise(SALARY_Mean= mean(SALARY), ROA_mean= mean(ROA),n_rows= n(), .groups= 'drop') %>%
+  arrange(desc(ROA_mean))
+  
+  
+```
+
+

@@ -1,0 +1,115 @@
+---
+title: "Lab-05: Data Visualization"
+author: KARTHIK R PATIL
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    theme: simplex
+    number_sections: false
+---
+
+```{r global_options, include = FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+```
+
+## 0 load the package 
+```{r}
+library(tidyverse)
+
+
+```
+
+## 1 create a data frame 
+```{r}
+# read data from a csv file 
+housing.df= read.csv("BostonHousing.csv")
+
+# first six rows 
+head(housing.df)
+# column names 
+names(housing.df)
+```
+
+## 2 scatter plot
+
+### 2.1 scatter plot of MEDV on LSTAT 
+```{r}
+ggplot(data = housing.df) + 
+geom_point(mapping = aes(x = LSTAT, y = MEDV))
+
+```
+
+### 2.2 scatter plot of MEDV on LSTAT by CAT..MEDV
+```{r}
+
+ggplot(data = housing.df)+
+  geom_point(mapping = aes(x = LSTAT, y = MEDV, color = as.factor(CAT..MEDV)))
+
+```
+
+## 3 trend line
+
+### 3.1 add a smooth curve that follows the trajectory of the relationship between MEDV and LSTAT 
+```{r}
+ggplot(data = housing.df, mapping = aes(x = LSTAT, y = MEDV)) + 
+  geom_point(color = "navy", alpha = 2/10) +
+  geom_smooth(color = "orange", size = 1)
+
+
+```
+
+### 3.2 add a linear trend line
+```{r}
+ggplot(data = housing.df, mapping = aes(x = LSTAT, y = MEDV)) + 
+  geom_point(color = "navy", alpha = 2/10) +
+  geom_smooth(method = "lm", color = "orange", size = 1, se = FALSE)
+ 
+```
+
+## 4 line plot 
+
+### 4.1 fit a simple linear regression model 
+```{r}
+# use the linear model function to directly compute the trend line that best fits the data
+lm <- lm(MEDV ~ LSTAT, data = housing.df )
+# summary of regression results  
+summary(lm)
+# head of the predicted values
+head(lm)
+
+```
+
+
+### 4.2 connect predictions 
+```{r}
+ggplot(data = housing.df) +
+  geom_point(mapping = aes(x = LSTAT, y = MEDV), color = "navy", alpha = 2/10) +
+  geom_line(mapping = aes(x = LSTAT, y = lm$fitted.values), color = "orange", size = 1)
+
+```
+
+## 5 sumamry statistics 
+
+### 5.1 visualize average MEDV by CHAS 
+```{r}
+ggplot(data = housing.df) + 
+  stat_summary(mapping = aes(x = CHAS, y = MEDV), geom = "bar", fun = "mean", fill = "blue")
+
+```
+
+### 5.2 visualize average CAT..MEDV by CHAS 
+```{r}
+ggplot(data = housing.df) + 
+  stat_summary(mapping = aes(x = CHAS, y = CAT..MEDV), geom = "bar", fun = "mean", fill = "blue")
+```
+
+## 6 histogram
+
+### 6.1 visualize the distribution of MEDV  
+```{r}
+ggplot(data = housing.df) + 
+  geom_histogram(mapping = aes(x = MEDV), binwidth = 5, fill = "blue", color = "white")
+
+```
